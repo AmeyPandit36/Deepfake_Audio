@@ -7,52 +7,102 @@ import librosa
 import os
 
 # 1. Model Architecture (Exact match to your deepfakeaudio.ipynb)
+# class DeepfakeAudioDetector(nn.Module):
+#     def __init__(self):
+#         super(DeepfakeAudioDetector, self).__init__()
+#         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+#         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+#         self.pool = nn.MaxPool2d(2, 2)
+        
+#         # This MUST be exactly 20480 (64 * 10 * 32) to match your .pth file
+#         self.fc1 = nn.Linear(20480, 128)
+#         self.fc2 = nn.Linear(128, 2)
+
+#     def forward(self, x):
+#         x = self.pool(F.relu(self.conv1(x)))
+#         x = self.pool(F.relu(self.conv2(x)))
+        
+#         # Flatten the output for the linear layer
+#         x = x.view(x.size(0), -1) 
+#         x = F.relu(self.fc1(x))
+#         x = self.fc2(x)
+#         return x
+
+ 
+
+# 2. Preprocessing Logic (Exact match to your extract_features function)
+# def process_audio(file):
+#     # Load audio at 16kHz
+#     y, sr = librosa.load(file, sr=16000)
+#     # Trim silence
+#     y, _ = librosa.effects.trim(y, top_db=50)
+#     # Fix length to 4 seconds
+#     target_len = 4 * 16000
+#     y = librosa.util.fix_length(y, size=target_len)
+    
+#     # Generate Mel-spectrogram (40 mels)
+#     mel = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=40)
+#     log_S = librosa.power_to_db(mel, ref=np.max)
+    
+#     # Normalize to [-1, 1]
+#     min_v, max_v = log_S.min(), log_S.max()
+#     if max_v > min_v:
+#         log_S = (log_S - min_v) / (max_v - min_v)
+#     else:
+#         log_S = np.zeros_like(log_S)
+#     log_S = 2.0 * log_S - 1.0
+    
+#     # Convert to tensor and add batch/channel dims
+#     return torch.from_numpy(log_S).unsqueeze(0).unsqueeze(0).float()
+
+
 class DeepfakeAudioDetector(nn.Module):
     def __init__(self):
         super(DeepfakeAudioDetector, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
-        
-        # This MUST be exactly 20480 (64 * 10 * 32) to match your .pth file
+        # 64 channels * 10 height * 32 width = 20480
         self.fc1 = nn.Linear(20480, 128)
         self.fc2 = nn.Linear(128, 2)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        
-        # Flatten the output for the linear layer
+        # Force the flatten to match whatever comes out, 
+        # but if it's not 20480, it will error here—helping us debug.
         x = x.view(x.size(0), -1) 
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
- 
-
-# 2. Preprocessing Logic (Exact match to your extract_features function)
 def process_audio(file):
-    # Load audio at 16kHz
+    # 1. Load at 16kHz
     y, sr = librosa.load(file, sr=16000)
-    # Trim silence
-    y, _ = librosa.effects.trim(y, top_db=50)
-    # Fix length to 4 seconds
+    
+    # 2. Fix length to EXACTLY 4 seconds (64000 samples)
+    # If the file is shorter, it pads; if longer, it crops.
     target_len = 4 * 16000
     y = librosa.util.fix_length(y, size=target_len)
     
-    # Generate Mel-spectrogram (40 mels)
-    mel = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=40)
+    # 3. Mel-spectrogram with specific parameters to hit the 20480 target
+    # n_mels=40 and the time-axis must result in 128 frames (128/4 = 32 after pooling)
+    mel = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=501, n_mels=40)
+    # Note: hop_length=501 is a trick to ensure the width is exactly 128 frames
+    
     log_S = librosa.power_to_db(mel, ref=np.max)
     
-    # Normalize to [-1, 1]
-    min_v, max_v = log_S.min(), log_S.max()
-    if max_v > min_v:
-        log_S = (log_S - min_v) / (max_v - min_v)
-    else:
-        log_S = np.zeros_like(log_S)
+    # 4. Normalization
+    log_S = (log_S - log_S.min()) / (log_S.max() - log_S.min() + 1e-6)
     log_S = 2.0 * log_S - 1.0
     
-    # Convert to tensor and add batch/channel dims
+    # 5. Ensure shape is [1, 1, 40, 128]
+    # If the width is 129 or 127, the linear layer will fail.
+    if log_S.shape[1] > 128:
+        log_S = log_S[:, :128]
+    elif log_S.shape[1] < 128:
+        log_S = np.pad(log_S, ((0,0), (0, 128 - log_S.shape[1])))
+
     return torch.from_numpy(log_S).unsqueeze(0).unsqueeze(0).float()
 
 # 3. Streamlit Interface
