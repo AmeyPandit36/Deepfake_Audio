@@ -164,88 +164,103 @@ def process_audio(uploaded_file):
 #     st.info("The image detection platform is currently under development.")
 
 # 3. Streamlit Interface
+# 3. Streamlit Interface
 st.set_page_config(
-    page_title="Deepfake Shield | AI Forensic Tool",
+    page_title="Deepfake Shield | Forensic Analysis",
     page_icon="🛡️",
-    layout="wide" # Switched to wide for a better "dashboard" feel
+    layout="wide"
 )
 
-# Custom CSS for a clean, professional "Cyber" aesthetic
+# Custom CSS for a Clean, Scientific Light Theme
 st.markdown("""
     <style>
-    /* Professional Dark Background */
+    /* Main Background */
     .stApp {
-        background-color: #0e1117;
+        background-color: #f8f9fa;
+        color: #1e293b;
     }
     
-    /* Result Card Styling */
-    .report-box {
-        padding: 30px;
-        border-radius: 15px;
-        border: 1px solid #30363d;
-        background-color: #161b22;
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        border-right: 1px solid #e2e8f0;
+    }
+
+    /* Professional Report Box */
+    .report-card {
+        background-color: #ffffff;
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         margin-top: 20px;
     }
-    
-    /* Custom Metric Styling */
-    .metric-text {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #8b949e;
+
+    /* Typography */
+    h1, h2, h3 {
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
     }
-    
-    .status-badge {
-        padding: 10px 20px;
-        border-radius: 50px;
-        font-weight: bold;
-        text-align: center;
-        display: inline-block;
-        margin-bottom: 10px;
+
+    /* Buttons */
+    .stButton>button {
+        background-color: #2563eb;
+        color: white;
+        border-radius: 8px;
+        padding: 0.5rem 2rem;
+        border: none;
+        transition: all 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #1d4ed8;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# Sidebar Branding
+# Sidebar
 with st.sidebar:
-    st.markdown("## 🛡️ Forensic Suite")
+    st.markdown("# 🛡️ **Forensic Lab**")
     st.markdown("---")
-    choice = st.radio("Navigation", ["Home", "Audio Verifier", "Image Verifier"])
-    st.divider()
-    st.success("System Status: Online 🟢")
+    choice = st.radio("ANALYSIS MODE", ["Overview", "Audio Verification", "Image Analysis"])
+    st.markdown("---")
+    st.caption("v2.1.0-Stable")
+    st.status("System Ready", state="complete")
 
-if choice == "Home":
-    st.title("🛡️ Deepfake Shield")
-    st.subheader("Advanced Multi-Modal Media Authentication")
+if choice == "Overview":
+    st.title("Deepfake Shield Portal")
+    st.markdown("### Neural Network-Based Media Authentication")
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        st.markdown("""
-        ### **Core Analysis Modules**
-        * **🎙️ Vocal Frequency Artifacts:** Identifies unnatural synthetic speech patterns.
-        * **🖼️ GAN Signature Detection:** Scans for microscopic pixel inconsistencies (Coming Soon).
-        * **📊 Probability Engine:** Cross-references data against known AI generation models.
+        st.write("""
+        This platform utilizes advanced Convolutional Neural Networks (CNNs) to identify 
+        discrepancies in digital media that are invisible to the human ear and eye.
         """)
-        
+        st.info("**Research Focus:** Identifying Mel-frequency artifacts in Generative AI speech models.")
+    
     with col2:
-        st.warning("**LEGAL DISCLAIMER:** This tool provides a probabilistic assessment. AI-generated media is increasingly sophisticated; always consult a human forensic specialist for critical verification.")
+        st.image("https://www.shutterstock.com/image-vector/artificial-intelligence-related-line-icon-600nw-1383838379.jpg", use_column_width=True)
 
-elif choice == "Audio Verifier":
-    st.title("🎙️ Audio Forensic Analysis")
-    st.info("Scanner ready. Please upload target media for deep frequency inspection.")
+elif choice == "Audio Verification":
+    st.title("🎙️ Audio Forensic Scanner")
+    st.write("Upload high-fidelity audio samples for deep-layer frequency analysis.")
     
-    uploaded_file = st.file_uploader("Upload Target (MP3, WAV, M4A)", type=["wav", "mp3", "ogg", "m4a"])
-    
+    # File Uploader Container
+    with st.container():
+        uploaded_file = st.file_uploader("", type=["wav", "mp3", "m4a"])
+        
     if uploaded_file:
-        st.markdown("---")
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            st.write(f"📁 **File Name:** \n{uploaded_file.name}")
-        with c2:
+        st.markdown('<div class="report-card">', unsafe_allow_html=True)
+        col_a, col_b = st.columns([1, 1])
+        with col_a:
+            st.markdown(f"**Target File:** `{uploaded_file.name}`")
+        with col_b:
             st.audio(uploaded_file)
         
-        if st.button("EXECUTE ANALYSIS SCAN", type="primary"):
-            with st.spinner('🔬 Deconstructing audio layers and running neural verification...'):
-                # Processing logic
+        if st.button("RUN NEURAL DIAGNOSTIC"):
+            with st.spinner('Analyzing spectral consistency...'):
+                # Core logic
                 model = DeepfakeAudioDetector()
                 model.load_state_dict(torch.load("deepfake_audio_model.pth", map_location='cpu'))
                 model.eval()
@@ -258,30 +273,19 @@ elif choice == "Audio Verifier":
                 
                 confidence = prob[0][prediction].item()
                 
-                # PROFESSIONAL RESULT PANEL (Replaced Balloons)
-                st.markdown('<div class="report-box">', unsafe_allow_html=True)
-                
+                # Report UI
+                st.markdown("---")
                 if prediction == 0:
-                    st.markdown('<div class="status-badge" style="background-color: #238636; color: white;">VERIFIED AUTHENTIC</div>', unsafe_allow_html=True)
-                    st.subheader("Analysis Result: REAL VOICE")
-                    st.write("No synthetic vocal artifacts detected in the current audio sample.")
+                    st.subheader("Result: ✅ VERIFIED HUMAN")
+                    st.progress(confidence)
+                    st.write(f"The system is **{confidence*100:.1f}%** confident this audio is authentic.")
                 else:
-                    st.markdown('<div class="status-badge" style="background-color: #da3633; color: white;">SYNTHETIC ALERT</div>', unsafe_allow_html=True)
-                    st.subheader("Analysis Result: DEEPFAKE DETECTED")
-                    st.write("Potential AI-generated signatures detected in the audio frequency spectrum.")
-                
-                st.markdown(f'<p class="metric-text">AI Confidence Score: {confidence*100:.2f}%</p>', unsafe_allow_html=True)
-                st.progress(confidence)
-                
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.subheader("Result: 🚨 SYNTHETIC ARTIFACTS DETECTED")
+                    st.progress(confidence)
+                    st.write(f"The system detected AI-generated signatures with **{confidence*100:.1f}%** probability.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
-elif choice == "Image Verifier":
-    st.title("🖼️ Image Forensic Analysis")
-    st.markdown("""
-    ### **Development Status: ⚠️ Offline**
-    The Image Verification module is currently in training. 
-    It will feature:
-    1.  **Eye Reflection Analysis**
-    2.  **Skin Texture Irregularity Scanning**
-    3.  **Metadata Consistency Checks**
-    """)
+elif choice == "Image Analysis":
+    st.title("🖼️ Image Analysis")
+    st.info("Module in Calibration: Integration with ResNet-50 expected in next update.")
