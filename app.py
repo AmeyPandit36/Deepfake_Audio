@@ -7,24 +7,6 @@ import librosa
 import os
 
 # 1. Model Architecture (Exact match to your deepfakeaudio.ipynb)
-# class DeepfakeAudioDetector(nn.Module):
-#     def __init__(self):
-#         super(DeepfakeAudioDetector, self).__init__()
-#         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-#         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-#         self.pool = nn.MaxPool2d(2, 2)
-#         # Flattened size: 64 * 10 * 32 = 20480
-#         self.fc1 = nn.Linear(64 * 10 * 32, 128)
-#         self.fc2 = nn.Linear(128, 2)
-
-#     def forward(self, x):
-#         x = self.pool(F.relu(self.conv1(x)))
-#         x = self.pool(F.relu(self.conv2(x)))
-#         x = x.view(-1, 64 * 10 * 32)
-#         x = F.relu(self.fc1(x))
-#         x = self.fc2(x)
-#         return x
-
 class DeepfakeAudioDetector(nn.Module):
     def __init__(self):
         super(DeepfakeAudioDetector, self).__init__()
@@ -32,24 +14,21 @@ class DeepfakeAudioDetector(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         
-        # Use a dummy input to find the exact flattened size
-        with torch.no_grad():
-            dummy_input = torch.zeros(1, 1, 40, 126) # 126 is common for 4s/16k/512hop
-            x = self.pool(F.relu(self.conv1(dummy_input)))
-            x = self.pool(F.relu(self.conv2(x)))
-            self.flatten_size = x.numel() # Automatically counts the elements
-            
-        self.fc1 = nn.Linear(self.flatten_size, 128)
+        # This MUST be exactly 20480 (64 * 10 * 32) to match your .pth file
+        self.fc1 = nn.Linear(20480, 128)
         self.fc2 = nn.Linear(128, 2)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        # Use the dynamic size here
+        
+        # Flatten the output for the linear layer
         x = x.view(x.size(0), -1) 
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
+ 
 
 # 2. Preprocessing Logic (Exact match to your extract_features function)
 def process_audio(file):
