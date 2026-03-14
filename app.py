@@ -56,83 +56,196 @@ def process_audio(uploaded_file):
             os.remove(tmp_path)
 
 # 3. Streamlit Interface
+# # 3. Streamlit Interface
+# st.set_page_config(
+#     page_title="Deepfake Shield | AI Forensic Tool",
+#     page_icon="🛡️",
+#     layout="centered"
+# )
+
+# # Custom CSS for a high-tech dark theme
+# st.markdown("""
+#     <style>
+#     .main {
+#         background-color: #0e1117;
+#     }
+#     .stButton>button {
+#         width: 100%;
+#         border-radius: 5px;
+#         height: 3em;
+#         background-color: #FF4B4B;
+#         color: white;
+#         font-weight: bold;
+#         border: none;
+#     }
+#     .stButton>button:hover {
+#         background-color: #ff3333;
+#         border: 1px solid white;
+#     }
+#     .result-card {
+#         padding: 20px;
+#         border-radius: 10px;
+#         border: 1px solid #30363d;
+#         background-color: #161b22;
+#         text-align: center;
+#     }
+#     </style>
+#     """, unsafe_allow_html=True)
+
+# # Sidebar with better branding
+# with st.sidebar:
+#     st.image("https://cdn-icons-png.flaticon.com/512/2092/2092663.png", width=100)
+#     st.title("Forensic Suite")
+#     choice = st.radio("Navigation", ["Home", "Audio Verifier", "Image Verifier"])
+#     st.divider()
+#     st.info("System Status: Online 🟢")
+
+# if choice == "Home":
+#     st.title("🛡️ Deepfake Shield")
+#     st.subheader("Advanced Multi-Modal Media Authentication")
+    
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         st.markdown("""
+#         ### **Capabilities**
+#         * 🎙️ **Vocal Artifact Analysis**
+#         * 🖼️ **GAN Pattern Detection**
+#         * 📊 **Probability Scoring**
+#         """)
+#     with col2:
+#         st.warning("**Note:** This is an AI research tool. Results should be verified by human forensic experts.")
+    
+#     st.image("https://miro.medium.com/v2/resize:fit:1400/1*H_O9Nq4T6A2Yh0p0U_j0wA.jpeg", caption="AI vs. Real Reality")
+
+# elif choice == "Audio Verifier":
+#     st.title("🎙️ Audio Forensic Analysis")
+#     st.write("Detecting synthetic manipulation in vocal frequencies.")
+    
+#     uploaded_file = st.file_uploader("Upload Audio (MP3, WAV, M4A)", type=["wav", "mp3", "ogg", "m4a"])
+    
+#     if uploaded_file:
+#         st.markdown('<div class="result-card">', unsafe_allow_html=True)
+#         st.write(f"📂 **File:** {uploaded_file.name}")
+#         st.audio(uploaded_file)
+#         st.markdown('</div>', unsafe_allow_html=True)
+        
+#         st.write("") # Spacer
+        
+#         if st.button("START DEEP SCAN"):
+#             with st.spinner('🔬 Extracting Mel-Spectrogram and analyzing...'):
+#                 model = DeepfakeAudioDetector()
+#                 model.load_state_dict(torch.load("deepfake_audio_model.pth", map_location='cpu'))
+#                 model.eval()
+                
+#                 input_data = process_audio(uploaded_file)
+#                 with torch.no_grad():
+#                     output = model(input_data)
+#                     prob = torch.softmax(output, dim=1)
+#                     prediction = torch.argmax(output).item()
+                
+#                 confidence = prob[0][prediction].item()
+                
+#                 # Big Result Visuals
+#                 st.divider()
+#                 if prediction == 0:
+#                     st.balloons()
+#                     st.success(f"### ✅ AUTHENTIC VOICE")
+#                     st.progress(confidence)
+#                     st.write(f"Confidence Level: **{confidence*100:.2f}%**")
+#                 else:
+#                     st.error(f"### 🚨 SYNTHETIC DEEPFAKE DETECTED")
+#                     st.progress(confidence)
+#                     st.write(f"AI Probability: **{confidence*100:.2f}%**")
+
+# elif choice == "Image Verifier":
+#     st.title("🖼️ Image Forensic Analysis")
+#     st.info("Coming Soon: CNN-based Image Authenticator")
+#     st.image("https://media.istockphoto.com/id/1310452331/vector/abstract-face-recognition-system.jpg?s=612x612&w=0&k=20&c=q11t8Nf_wQ3T0Yw1U6qW9z7z9z7z9z7z9z7z9z7z9z=")
+#     st.info("The image detection platform is currently under development.")
+
 # 3. Streamlit Interface
 st.set_page_config(
     page_title="Deepfake Shield | AI Forensic Tool",
     page_icon="🛡️",
-    layout="centered"
+    layout="wide" # Switched to wide for a better "dashboard" feel
 )
 
-# Custom CSS for a high-tech dark theme
+# Custom CSS for a clean, professional "Cyber" aesthetic
 st.markdown("""
     <style>
-    .main {
+    /* Professional Dark Background */
+    .stApp {
         background-color: #0e1117;
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #FF4B4B;
-        color: white;
-        font-weight: bold;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #ff3333;
-        border: 1px solid white;
-    }
-    .result-card {
-        padding: 20px;
-        border-radius: 10px;
+    
+    /* Result Card Styling */
+    .report-box {
+        padding: 30px;
+        border-radius: 15px;
         border: 1px solid #30363d;
         background-color: #161b22;
+        margin-top: 20px;
+    }
+    
+    /* Custom Metric Styling */
+    .metric-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #8b949e;
+    }
+    
+    .status-badge {
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-weight: bold;
         text-align: center;
+        display: inline-block;
+        margin-bottom: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# Sidebar with better branding
+# Sidebar Branding
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2092/2092663.png", width=100)
-    st.title("Forensic Suite")
+    st.markdown("## 🛡️ Forensic Suite")
+    st.markdown("---")
     choice = st.radio("Navigation", ["Home", "Audio Verifier", "Image Verifier"])
     st.divider()
-    st.info("System Status: Online 🟢")
+    st.success("System Status: Online 🟢")
 
 if choice == "Home":
     st.title("🛡️ Deepfake Shield")
     st.subheader("Advanced Multi-Modal Media Authentication")
     
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown("""
-        ### **Capabilities**
-        * 🎙️ **Vocal Artifact Analysis**
-        * 🖼️ **GAN Pattern Detection**
-        * 📊 **Probability Scoring**
+        ### **Core Analysis Modules**
+        * **🎙️ Vocal Frequency Artifacts:** Identifies unnatural synthetic speech patterns.
+        * **🖼️ GAN Signature Detection:** Scans for microscopic pixel inconsistencies (Coming Soon).
+        * **📊 Probability Engine:** Cross-references data against known AI generation models.
         """)
+        
     with col2:
-        st.warning("**Note:** This is an AI research tool. Results should be verified by human forensic experts.")
-    
-    st.image("https://miro.medium.com/v2/resize:fit:1400/1*H_O9Nq4T6A2Yh0p0U_j0wA.jpeg", caption="AI vs. Real Reality")
+        st.warning("**LEGAL DISCLAIMER:** This tool provides a probabilistic assessment. AI-generated media is increasingly sophisticated; always consult a human forensic specialist for critical verification.")
 
 elif choice == "Audio Verifier":
     st.title("🎙️ Audio Forensic Analysis")
-    st.write("Detecting synthetic manipulation in vocal frequencies.")
+    st.info("Scanner ready. Please upload target media for deep frequency inspection.")
     
-    uploaded_file = st.file_uploader("Upload Audio (MP3, WAV, M4A)", type=["wav", "mp3", "ogg", "m4a"])
+    uploaded_file = st.file_uploader("Upload Target (MP3, WAV, M4A)", type=["wav", "mp3", "ogg", "m4a"])
     
     if uploaded_file:
-        st.markdown('<div class="result-card">', unsafe_allow_html=True)
-        st.write(f"📂 **File:** {uploaded_file.name}")
-        st.audio(uploaded_file)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.write(f"📁 **File Name:** \n{uploaded_file.name}")
+        with c2:
+            st.audio(uploaded_file)
         
-        st.write("") # Spacer
-        
-        if st.button("START DEEP SCAN"):
-            with st.spinner('🔬 Extracting Mel-Spectrogram and analyzing...'):
+        if st.button("EXECUTE ANALYSIS SCAN", type="primary"):
+            with st.spinner('🔬 Deconstructing audio layers and running neural verification...'):
+                # Processing logic
                 model = DeepfakeAudioDetector()
                 model.load_state_dict(torch.load("deepfake_audio_model.pth", map_location='cpu'))
                 model.eval()
@@ -145,20 +258,30 @@ elif choice == "Audio Verifier":
                 
                 confidence = prob[0][prediction].item()
                 
-                # Big Result Visuals
-                st.divider()
+                # PROFESSIONAL RESULT PANEL (Replaced Balloons)
+                st.markdown('<div class="report-box">', unsafe_allow_html=True)
+                
                 if prediction == 0:
-                    st.balloons()
-                    st.success(f"### ✅ AUTHENTIC VOICE")
-                    st.progress(confidence)
-                    st.write(f"Confidence Level: **{confidence*100:.2f}%**")
+                    st.markdown('<div class="status-badge" style="background-color: #238636; color: white;">VERIFIED AUTHENTIC</div>', unsafe_allow_html=True)
+                    st.subheader("Analysis Result: REAL VOICE")
+                    st.write("No synthetic vocal artifacts detected in the current audio sample.")
                 else:
-                    st.error(f"### 🚨 SYNTHETIC DEEPFAKE DETECTED")
-                    st.progress(confidence)
-                    st.write(f"AI Probability: **{confidence*100:.2f}%**")
+                    st.markdown('<div class="status-badge" style="background-color: #da3633; color: white;">SYNTHETIC ALERT</div>', unsafe_allow_html=True)
+                    st.subheader("Analysis Result: DEEPFAKE DETECTED")
+                    st.write("Potential AI-generated signatures detected in the audio frequency spectrum.")
+                
+                st.markdown(f'<p class="metric-text">AI Confidence Score: {confidence*100:.2f}%</p>', unsafe_allow_html=True)
+                st.progress(confidence)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
 
 elif choice == "Image Verifier":
     st.title("🖼️ Image Forensic Analysis")
-    st.info("Coming Soon: CNN-based Image Authenticator")
-    st.image("https://media.istockphoto.com/id/1310452331/vector/abstract-face-recognition-system.jpg?s=612x612&w=0&k=20&c=q11t8Nf_wQ3T0Yw1U6qW9z7z9z7z9z7z9z7z9z7z9z=")
-    st.info("The image detection platform is currently under development.")
+    st.markdown("""
+    ### **Development Status: ⚠️ Offline**
+    The Image Verification module is currently in training. 
+    It will feature:
+    1.  **Eye Reflection Analysis**
+    2.  **Skin Texture Irregularity Scanning**
+    3.  **Metadata Consistency Checks**
+    """)
