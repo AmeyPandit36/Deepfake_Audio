@@ -162,8 +162,8 @@ if choice == "Home":
 elif choice == "Audio Detection":
     st.title("🎙️ Audio Authenticity Verifier")
     st.write("Upload a .wav file to check if it's a Deepfake or Real human voice.")
-        st.write(f"Successfully loaded: **{uploaded_file.name}**")
-        st.audio(uploaded_file)
+    st.write(f"Successfully loaded: **{uploaded_file.name}**")
+    st.audio(uploaded_file)
     
     # uploaded_file = st.file_uploader("Choose a wav file", type="wav")
         # Change this line:
