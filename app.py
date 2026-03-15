@@ -6,6 +6,8 @@ import numpy as np
 import librosa
 import os
 import tempfile
+import matplotlib.pyplot as plt
+import librosa.display
 
 # 1. NEW SOTA Model Architecture (Matches Cell 4 of your notebook)
 class EfficientGraphAttention(nn.Module):
@@ -85,7 +87,7 @@ elif choice == "Audio Verification":
 
         # Load audio for visualization (separate from model processing)
         y, sr = librosa.load(uploaded_file, sr=16000)
-        
+
         st.audio(uploaded_file)
 
         # --- NEW VISUALIZATION SECTION ---
