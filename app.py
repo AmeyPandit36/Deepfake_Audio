@@ -45,21 +45,53 @@ class SOTA_AudioDetector(nn.Module):
         return self.fc2(x)
 
 # 2. NEW Preprocessing Logic (Raw Waveform)
-def process_audio(uploaded_file):
+# def process_audio(uploaded_file):
+#     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
+#         tmp_file.write(uploaded_file.getvalue())
+#         tmp_path = tmp_file.name
+
+#     try:
+#         # Load raw audio at 16kHz
+#         y, sr = librosa.load(tmp_path, sr=16000)
+#         # Fix length to 4 seconds (64,000 samples)
+#         y = librosa.util.fix_length(y, size=64000)
+#         # Z-score Normalization
+#         y = (y - np.mean(y)) / (np.std(y) + 1e-7)
+        
+#         # Return as tensor with shape [1, 1, 64000]
+#         return torch.from_numpy(y).unsqueeze(0).unsqueeze(0).float()
+#     finally:
+#         if os.path.exists(tmp_path):
+#             os.remove(tmp_path)
+
+def process_long_audio(uploaded_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
         tmp_path = tmp_file.name
 
     try:
-        # Load raw audio at 16kHz
         y, sr = librosa.load(tmp_path, sr=16000)
-        # Fix length to 4 seconds (64,000 samples)
-        y = librosa.util.fix_length(y, size=64000)
-        # Z-score Normalization
-        y = (y - np.mean(y)) / (np.std(y) + 1e-7)
         
-        # Return as tensor with shape [1, 1, 64000]
-        return torch.from_numpy(y).unsqueeze(0).unsqueeze(0).float()
+        # Calculate how many 4-second chunks we have
+        window_size = 4 * 16000
+        total_samples = len(y)
+        
+        chunks = []
+        # We slide the window by 4 seconds each time (no overlap for speed)
+        for i in range(0, total_samples - window_size + 1, window_size):
+            chunk = y[i : i + window_size]
+            # Normalize each chunk
+            chunk = (chunk - np.mean(chunk)) / (np.std(chunk) + 1e-7)
+            chunks.append(chunk)
+            
+        # If the file is shorter than 4 seconds, just pad it
+        if not chunks:
+            y_padded = librosa.util.fix_length(y, size=window_size)
+            y_norm = (y_padded - np.mean(y_padded)) / (np.std(y_padded) + 1e-7)
+            chunks.append(y_norm)
+
+        # Convert list of chunks into a single Batch Tensor: [Num_Chunks, 1, 64000]
+        return torch.from_numpy(np.array(chunks)).unsqueeze(1).float()
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -84,49 +116,63 @@ elif choice == "Audio Verification":
     uploaded_file = st.file_uploader("Upload Audio", type=["wav", "mp3", "m4a"])
     
     if uploaded_file:
-
+        # --- FIX 1: Reset buffer to ensure we can read the file multiple times ---
+        uploaded_file.seek(0)
+        
         # Load audio for visualization (separate from model processing)
+        # Using a lower sr for visualization saves memory
         y, sr = librosa.load(uploaded_file, sr=16000)
 
         st.audio(uploaded_file)
 
-        # --- NEW VISUALIZATION SECTION ---
         st.write("### 📊 Signal Analysis")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write("**Waveform** (Amplitude over Time)")
+            st.write("**Waveform**")
             fig_wave, ax_wave = plt.subplots(figsize=(10, 4))
             librosa.display.waveshow(y, sr=sr, ax=ax_wave, color='#2563eb')
-            ax_wave.set_axis_off() # Clean look
+            ax_wave.set_axis_off()
             st.pyplot(fig_wave)
             
         with col2:
-            st.write("**Spectrogram** (Frequency over Time)")
+            st.write("**Spectrogram**")
             fig_spec, ax_spec = plt.subplots(figsize=(10, 4))
             S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
             S_db = librosa.power_to_db(S, ref=np.max)
-            img = librosa.display.specshow(S_db, x_axis='time', y_axis='mel', sr=sr, ax=ax_spec, cmap='magma')
-            ax_spec.set_axis_off() # Clean look
+            librosa.display.specshow(S_db, x_axis='time', y_axis='mel', sr=sr, ax=ax_spec, cmap='magma')
+            ax_spec.set_axis_off()
             st.pyplot(fig_spec)
-        # ---------------------------------
-        
+
+        # --- RUN DIAGNOSTIC SECTION ---
         if st.button("RUN NEURAL DIAGNOSTIC"):
-            with st.spinner('Performing Deep Waveform Analysis...'):
-                # Load the NEW weights
+            with st.spinner('🔭 Scanning entire file piece-by-piece...'):
                 model = SOTA_AudioDetector()
                 model.load_state_dict(torch.load("sota_deepfake_detector.pth", map_location='cpu'))
                 model.eval()
                 
-                input_data = process_audio(uploaded_file)
+                # --- FIX 2: Reset buffer AGAIN before the diagnostic function ---
+                uploaded_file.seek(0)
+                input_batch = process_long_audio(uploaded_file) 
+                
+                # LIMIT CHECK: If file is too long (e.g., > 50 chunks), 
+                # we process only the first 50 to prevent memory crashes
+                if len(input_batch) > 50:
+                    st.warning(f"Note: This is a very long file. To save memory, we are analyzing the first 200 seconds.")
+                    input_batch = input_batch[:50]
+
                 with torch.no_grad():
-                    output = model(input_data)
-                    prob = torch.softmax(output, dim=1)
-                    prediction = torch.argmax(output).item()
+                    outputs = model(input_batch)
+                    probs = torch.softmax(outputs, dim=1)
+                    
+                    avg_probs = torch.mean(probs, dim=0)
+                    prediction = torch.argmax(avg_probs).item()
+                    confidence = avg_probs[prediction].item()
                 
-                confidence = prob[0][prediction].item()
-                
+                st.markdown("---")
                 if prediction == 0:
-                    st.success(f"### ✅ VERIFIED HUMAN ({confidence*100:.1f}%)")
+                    st.success(f"### ✅ VERIFIED HUMAN")
+                    st.info(f"Analyzed {len(input_batch)} segments. Avg Probability: **{confidence*100:.1f}**%")
                 else:
-                    st.error(f"### 🚨 SYNTHETIC ARTIFACTS DETECTED ({confidence*100:.1f}%)")
+                    st.error(f"### 🚨 SYNTHETIC ARTIFACTS DETECTED")
+                    st.warning(f"AI signatures found across {len(input_batch)} segments. Avg Probability: **{confidence*100:.1f}**%")
